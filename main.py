@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from models import Item, SensorInput
 from scipy.fft import fft, fftfreq
 from scipy.stats import pearsonr
@@ -6,6 +7,15 @@ import numpy as np
 import pywt
 
 app = FastAPI()
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173, http://localhost:8081"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def center_signal(signal):
     """Centra la señal restando la media"""
@@ -128,7 +138,10 @@ def analyze_signal(signal: SensorInput):
     tremor_amplitude = np.max(half_spectrum[1:])
     
     return {
-        "original_metrics": original_metrics,
+        "original_metrics": {
+            "min amplitude": original_metrics["min_amplitude"],
+            "range amplitude": original_metrics["range_amplitude"],
+        },
         "correlations": correlations,
         "fft": {
             "frequency":freqs.tolist(), "spectrum":half_spectrum.tolist(),
