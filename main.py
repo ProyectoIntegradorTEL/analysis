@@ -70,6 +70,19 @@ def sample_entropy(signal, m=2, r=0.2):
         "entropy":entropy,
         "amplitude_metrics":original_metrics
     }
+    
+def unbiased_autocorrelation_normalized(signal):
+    """Calcula la autocorrelación no sesgada y normalizada"""
+    N = len(signal)
+    if N < 2:
+        raise ValueError("La señal debe tener al menos 2 muestras.")
+    
+    autocorr = np.correlate(signal, signal, mode='full')  
+    lags = np.arange(-N + 1, N)
+    normalization = np.array([N - abs(lag) for lag in lags])  
+    unbiased_autocorr = autocorr / normalization
+    unbiased_autocorr_normalized = unbiased_autocorr / unbiased_autocorr[N - 1]  
+    return lags, unbiased_autocorr_normalized
 
 @app.get("/")
 def read_root():
@@ -125,6 +138,9 @@ def analyze_signal(signal: SensorInput):
     # Entropia
     entropy_results = sample_entropy(acc_x)
     
+    # Autocorrelación
+    lags, autocorr_normalized = unbiased_autocorrelation_normalized(acc_x_centered)
+    
     # Analisis de movimiento
     movement_analysis = {
         "movement_intensity": original_metrics["mean_amplitude"],
@@ -154,6 +170,10 @@ def analyze_signal(signal: SensorInput):
             "scales": scales.tolist()
         },
         "entropy": entropy_results,
+        "autocorrelation": {
+            "lags": lags.tolist(),
+            "autocorr_normalized": autocorr_normalized.tolist()
+        },
         "movement_analysis": movement_analysis,
         "clinical_metrics": {
             "bradykinesia_score": float(1 - movement_analysis["movement_intensity"]/original_metrics["peak_amplitude"]),
